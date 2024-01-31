@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Convoluciones DGGA.</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <canvas id="resultado"></canvas>
+
+    <script type="text/javascript">
+
+        var image = new Image();
+        image.onload = imageLoaded;
+        image.src = "colibri.jpg";
+
+        function imageLoaded(){
+
+            var canvas = document.getElementById("canvas");
+            var ctx = canvas.getContext("2d");
+
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+
+            var resultado = document.getElementById("resultado");
+            convolucionarSobelColor(canvas, resultado);
+        }
+
+        function convolucionarSobelColor(canvasFuente, canvasDestino){
+
+            var ctxFuente = canvasFuente.getContext("2d");
+            var imgDataFuente = ctxFuente.getImageData(0, 0, canvasFuente.width, canvasFuente.height);
+            var pixelesFuente = imgDataFuente.data;
+
+            canvasDestino.width = canvasFuente.width;
+            canvasDestino.height = canvasFuente.height;
+
+            var ctxDestino = canvasDestino.getContext("2d");
+            var imgDataDestino = ctxDestino.getImageData(0, 0, canvasDestino.width, canvasDestino.height);
+            var pixelesDestino = imgDataDestino.data;
+
+            var sobelVertical = [
+                [-1, 0, 1],
+                [-2, 0, 2],
+                [-1, 0, 1],
+            ];
+
+            var sobelHorizontal = [
+                [-1, -2, -1],
+                [0, 0, 0],
+                [1, 2, 1],
+            ];
+
+            for (var y = 1; y < canvasFuente.height - 1; y++){
+                for (var x = 1; x < canvasFuente.width - 1; x++){
+
+                    // Posición en el arreglo javascript
+                    var idx = ((y * canvasFuente.width) + x) * 4;
+                    var totalYR = 0;
+                    var totalYG = 0;
+                    var totalYB = 0;
+                    var totalXR = 0;
+                    var totalXG = 0;
+                    var totalXB = 0;
+
+                    for( var kernelY = 0; kernelY < 3; kernelY++){
+                        for( var kernelX = 0; kernelX < 3; kernelX++){
+
+                            var pixelIdx = ((((y + (kernelY - 1)) * canvasFuente.width) + (x + (kernelX - 1))) * 4);
+
+                            totalYR += sobelVertical[kernelY][kernelX] * pixelesFuente[pixelIdx];
+                            totalYG += sobelVertical[kernelY][kernelX] * pixelesFuente[pixelIdx + 1];
+                            totalYB += sobelVertical[kernelY][kernelX] * pixelesFuente[pixelIdx + 2];
+
+                            totalXR += sobelHorizontal[kernelY][kernelX] * pixelesFuente[pixelIdx];
+                            totalXG += sobelHorizontal[kernelY][kernelX] * pixelesFuente[pixelIdx + 1];
+                            totalXB += sobelHorizontal[kernelY][kernelX] * pixelesFuente[pixelIdx + 2];
+                        }
+                    }
+
+                    var magR = Math.sqrt((totalXR * totalXR) + (totalYR * totalYR));
+                    var magG = Math.sqrt((totalXG * totalXG) + (totalYG * totalYG));
+                    var magB = Math.sqrt((totalXB * totalXB) + (totalYB * totalYB));
+
+                    // Aplicar los valores de magnitud a cada canal de color sin eliminar completamente el fondo
+                    var factor = 0.7; // Ajusta este valor para controlar la intensidad del efecto
+                    pixelesDestino[idx] = pixelesFuente[idx] + factor * magR; // rojo
+                    pixelesDestino[idx+1] = pixelesFuente[idx+1] + factor * magG; // verde
+                    pixelesDestino[idx+2] = pixelesFuente[idx+2] + factor * magB; // azul
+                    pixelesDestino[idx+3] = 255; // alpha
+
+                }
+            }
+
+            ctxDestino.putImageData(imgDataDestino, 0, 0);
+
+        }
+    </script>
+</body>
+</html>
